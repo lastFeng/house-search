@@ -1,7 +1,9 @@
 package com.example.housesearch.reposity;
 
 import com.example.housesearch.domain.SupportAddress;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface SupportAddressRepository extends CrudRepository<SupportAddress, Long> {
+@Repository
+public interface SupportAddressRepository extends JpaRepository<SupportAddress, Integer> {
 }

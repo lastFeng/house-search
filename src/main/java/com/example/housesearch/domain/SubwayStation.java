@@ -13,7 +13,6 @@ import java.io.Serializable;
  */
 @Entity(name = "subway_station")
 @Table(name = "subway_station")
-@NoArgsConstructor
 @Data
 @Builder
 @ToString
@@ -22,12 +21,21 @@ public class SubwayStation implements Serializable {
     /**主键*/
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /**地铁站名*/
     private String name;
 
     /**所属地铁线*/
     @Column(name = "subway_id")
-    private Long subwayId;
+    private Integer subwayId;
+
+    public SubwayStation(Integer id, String name, Integer subwayId) {
+        this.id = id;
+        this.name = name;
+        this.subwayId = subwayId;
+    }
+
+    protected SubwayStation() {
+    }
 }

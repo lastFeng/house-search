@@ -1,7 +1,9 @@
 package com.example.housesearch.reposity;
 
 import com.example.housesearch.domain.House;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface HouseRepository extends CrudRepository<House, Long> {
+@Repository
+public interface HouseRepository extends JpaRepository<House, Integer> {
 }

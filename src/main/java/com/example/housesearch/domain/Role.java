@@ -10,7 +10,6 @@ import java.io.Serializable;
  */
 @Entity(name = "role")
 @Table(name = "role")
-@NoArgsConstructor
 @Data
 @Builder
 @ToString
@@ -19,13 +18,22 @@ public class Role implements Serializable {
     /**主键*/
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
 
     /**用户*/
     @Column(name = "user_id")
-    private Long userId;
+    private Integer userId;
 
     /**角色名称*/
     private String name;
+
+    public Role(Integer id, Integer userId, String name) {
+        this.id = id;
+        this.userId = userId;
+        this.name = name;
+    }
+
+    protected Role() {
+    }
 }

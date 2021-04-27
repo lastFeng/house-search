@@ -13,7 +13,6 @@ import java.io.Serializable;
  */
 @Entity(name = "house_tag")
 @Table(name = "house_tag")
-@NoArgsConstructor
 @Data
 @Builder
 @ToString
@@ -22,12 +21,21 @@ public class HouseTag implements Serializable {
     /**主键*/
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /**房源*/
     @Column(name = "house_id")
-    private Long houseId;
+    private Integer houseId;
 
     /**标签名*/
     private String name;
+
+    public HouseTag(Integer id, Integer houseId, String name) {
+        this.id = id;
+        this.houseId = houseId;
+        this.name = name;
+    }
+
+    protected HouseTag() {
+    }
 }

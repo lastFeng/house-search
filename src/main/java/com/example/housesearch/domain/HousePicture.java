@@ -10,7 +10,6 @@ import java.io.Serializable;
  */
 @Entity(name = "house_picture")
 @Table(name = "house_picture")
-@NoArgsConstructor
 @Data
 @Builder
 @ToString
@@ -18,11 +17,11 @@ public class HousePicture implements Serializable {
     /**主键*/
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     /**房源*/
     @Column(name = "house_id")
-    private Long houseId;
+    private Integer houseId;
 
     /**cdn前缀*/
     @Column(name = "cdn_prefix")
@@ -39,4 +38,18 @@ public class HousePicture implements Serializable {
 
     /**图片路径*/
     private String path;
+
+    public HousePicture(Integer id, Integer houseId, String cdnPrefix,
+                        Integer width, Integer height, String location, String path) {
+        this.id = id;
+        this.houseId = houseId;
+        this.cdnPrefix = cdnPrefix;
+        this.width = width;
+        this.height = height;
+        this.location = location;
+        this.path = path;
+    }
+
+    protected HousePicture() {
+    }
 }
