@@ -40,7 +40,8 @@ public class HouseDetail implements Serializable {
     private Integer rentWay;
 
     /**地址*/
-    private String address;
+    @Column(name = "address")
+    private String detailAddress;
 
     /**地铁线*/
     @Column(name = "subway_line_id")

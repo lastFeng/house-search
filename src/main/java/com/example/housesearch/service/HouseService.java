@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,27 +30,32 @@ public class HouseService {
     @Autowired
     private HouseRepository houseRepository;
     @Autowired
-    private HouseDetailRepository houseDetailRepository;
+    private HouseDetailService houseDetailService;
     @Autowired
-    private HouseSubscribeRepository houseSubscribeRepository;
+    private HouseSubscribeService houseSubscribeService;
     @Autowired
-    private HousePictureRepository housePictureRepository;
+    private HousePictureService housePictureService;
     @Autowired
-    private HouseTagRepository houseTagRepository;
+    private HouseTagService houseTagService;
     @Autowired
-    private SubwayRepository subwayRepository;
+    private SubwayService subwayService;
     @Autowired
-    private SubwayStationRepository subwayStationRepository;
+    private SubwayStationService subwayStationService;
 
     /***
      * 新增房源
      * @param houseForm 房源表信息
      * @return
      */
+    @Transactional
     public ServiceResult<HouseDTO> saveOrUpdate(HouseForm houseForm) {
         // id为空为新增
         House house = modelMapper.map(houseForm, House.class);
+        HouseDetail detail;
+        List<HousePicture> pictures;
+        List<HouseTag> tags;
         Date now = new Date();
+
         if (Objects.isNull(houseForm.getId())) {
             house.setCreateTime(now);
             house.setLastUpdateTime(now);
@@ -59,37 +66,91 @@ public class HouseService {
             house.setLastUpdateTime(now);
             houseRepository.save(house);
         }
-        return null;
+
+        Integer id = houseForm.getId();
+
+        // 新增或修改HouseDetail
+        detail = houseDetailService.findByHouseId(id).orElse(new HouseDetail());
+        wrappedHouseDetail(detail, houseForm);
+        houseDetailService.save(detail);
+
+        // 新增或修改HousePicture
+        pictures = housePictureService.findAllByHouseId(id);
+        if (!CollectionUtils.isEmpty(pictures)) {
+            housePictureService.deleteAll(pictures);
+        }
+        pictures = new ArrayList<>();
+        List<PhotoForm> photos = houseForm.getPhotos();
+        if (!CollectionUtils.isEmpty(photos)) {
+            for (PhotoForm photo : photos) {
+                pictures.add(modelMapper.map(photo, HousePicture.class));
+            }
+        }
+        housePictureService.saveAll(pictures);
+
+        // 新增或修改HouseTags
+        tags = houseTagService.findAllByHouseId(id);
+        if (!CollectionUtils.isEmpty(tags)) {
+            houseTagService.deleteAll(tags);
+        }
+        pictures = new ArrayList<>();
+        List<String> tagList = houseForm.getTags();
+        if (!CollectionUtils.isEmpty(tagList)) {
+            for (String name : tagList) {
+                HouseTag tag = new HouseTag();
+                tag.setHouseId(id);
+                tag.setName(name);
+                tags.add(tag);
+            }
+        }
+        houseTagService.saveAll(tags);
+        return ServiceResult.<HouseDTO>builder().success(true).build();
     }
 
-    private HouseDetail wrappedHouseDetail(HouseForm houseForm) {
-        HouseDetail detail = modelMapper.map(houseForm, HouseDetail.class);
+    /***
+     * 从HouseForm表中提取出HouseDetail的详细信息
+     * @param detail
+     * @param houseForm
+     */
+    private void wrappedHouseDetail(HouseDetail detail, HouseForm houseForm) {
         detail.setHouseId(houseForm.getId());
         if (Objects.nonNull(houseForm.getSubwayLineId())) {
-            Subway subway = subwayRepository.findById(houseForm.getSubwayLineId()).orElse(null);
+            Subway subway = subwayService.findById(houseForm.getSubwayLineId()).orElse(null);
             if (Objects.nonNull(subway)) {
+                detail.setSubwayLineId(subway.getId());
                 detail.setSubwayLineName(subway.getName());
             }
         }
 
         if (!Objects.nonNull(houseForm.getSubwayStationId())) {
-            SubwayStation subwayStation = subwayStationRepository.findById(houseForm.getSubwayStationId()).orElse(null);
+            SubwayStation subwayStation = subwayStationService.findById(houseForm.getSubwayStationId()).orElse(null);
             if (Objects.nonNull(subwayStation)) {
+                detail.setSubwayStationId(subwayStation.getId());
                 detail.setSubwayStationName(subwayStation.getName());
             }
         }
-        return detail;
+
+        detail.setDescription(houseForm.getDescription());
+        detail.setDetailAddress(houseForm.getDetailAddress());
+        detail.setLayoutDesc(houseForm.getLayoutDesc());
+        detail.setRentWay(houseForm.getRentWay());
+        detail.setRoundService(houseForm.getRoundService());
+        detail.setTraffic(houseForm.getTraffic());
     }
 
     /**
      * 删
      */
+    @Transactional
+    public ServiceResult<Void> deleteHouseById(Integer houseId) {
+        houseTagService.deleteByHouseId(houseId);
+        housePictureService.deleteByHouseId(houseId);
+        houseDetailService.deleteByHouseId(houseId);
+        houseRepository.deleteById(houseId);
+        return ServiceResult.<Void>builder().success(true).build();
+    }
 
     /***
-     * 改
-     */
-
-    /***
-     * 查
+     * 查: 主页展示TODO
      */
 }
