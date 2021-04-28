@@ -49,7 +49,7 @@ public class CustomAuthFilter extends UsernamePasswordAuthenticationFilter {
 
         // 然后是手机验证码:获取手机号
         String telephone = request.getParameter("telephone");
-        if (StringUtils.isEmpty(telephone) || LoginUtils.checkErrorTelephone(telephone)) {
+        if (StringUtils.isEmpty(telephone) || !LoginUtils.checkTelephone(telephone)) {
             log.error("Wrong telephone number: " + telephone);
             throw new BadCredentialsException("Wrong telephone number!");
         }
