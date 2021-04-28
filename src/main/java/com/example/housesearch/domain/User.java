@@ -60,8 +60,9 @@ public class User implements Serializable, UserDetails {
     /**用户头像*/
     private String avatar;
 
-    public User(Integer id, String name, String email, String phoneNumber, String password, Integer status,
-                Date createTime, Date lastLoginTime, Date lastUpdateTime, String avatar) {
+    public User(Integer id, String name, String email, String phoneNumber, String password,
+                Integer status, Date createTime, Date lastLoginTime, Date lastUpdateTime, String avatar,
+                List<GrantedAuthority> authorityList) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -72,6 +73,7 @@ public class User implements Serializable, UserDetails {
         this.lastLoginTime = lastLoginTime;
         this.lastUpdateTime = lastUpdateTime;
         this.avatar = avatar;
+        this.authorityList = authorityList;
     }
 
     protected User() {

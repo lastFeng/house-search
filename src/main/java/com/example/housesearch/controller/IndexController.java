@@ -1,5 +1,12 @@
-package com.example.housesearch.controller;/**
-  * @author : guoweifeng
-  * @date : 2021/4/28
-  */public class IndexController {
+package com.example.housesearch.controller;
+
+import org.springframework.stereotype.Controller;
+
+/**
+ * @author : guoweifeng
+ * @date : 2021/4/28
+ */
+@Controller
+public class IndexController {
+
 }
