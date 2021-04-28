@@ -14,7 +14,6 @@ import java.io.Serializable;
 @Entity(name = "support_address")
 @Table(name = "support_address")
 @Data
-@Builder
 @ToString
 public class SupportAddress implements Serializable {
 
@@ -45,18 +44,4 @@ public class SupportAddress implements Serializable {
     /**百度地图维度*/
     @Column(name = "baidu_map_lat")
     private Double baiduMapLat;
-
-    public SupportAddress(Integer id, String belongTo, String enName, String cnName,
-                          String level, Double baiduMapLng, Double baiduMapLat) {
-        this.id = id;
-        this.belongTo = belongTo;
-        this.enName = enName;
-        this.cnName = cnName;
-        this.level = level;
-        this.baiduMapLng = baiduMapLng;
-        this.baiduMapLat = baiduMapLat;
-    }
-
-    protected SupportAddress() {
-    }
 }

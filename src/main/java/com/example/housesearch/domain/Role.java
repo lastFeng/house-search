@@ -11,7 +11,6 @@ import java.io.Serializable;
 @Entity(name = "role")
 @Table(name = "role")
 @Data
-@Builder
 @ToString
 public class Role implements Serializable {
 
@@ -27,13 +26,4 @@ public class Role implements Serializable {
 
     /**角色名称*/
     private String name;
-
-    public Role(Integer id, Integer userId, String name) {
-        this.id = id;
-        this.userId = userId;
-        this.name = name;
-    }
-
-    protected Role() {
-    }
 }

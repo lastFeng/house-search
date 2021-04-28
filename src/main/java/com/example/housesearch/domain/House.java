@@ -13,7 +13,6 @@ import java.util.Date;
 @Entity(name = "house")
 @Table(name = "house")
 @Data
-@Builder
 @ToString
 public class House implements Serializable {
     /**主键*/
@@ -93,35 +92,4 @@ public class House implements Serializable {
 
     /**街道*/
     private String street;
-
-    public House(Integer id, String title, Integer price, Integer area, Integer room, Integer floor,
-                 Integer totalFloor, Integer watchTimes, Integer buildYear, Integer status, Date createTime,
-                 Date lastUpdateTime, String cityEnName, String regionEnName, String cover, Integer direction,
-                 Integer distanceToSubway, Integer parlour, String district, Integer adminId, Integer bathroom, String street) {
-        this.id = id;
-        this.title = title;
-        this.price = price;
-        this.area = area;
-        this.room = room;
-        this.floor = floor;
-        this.totalFloor = totalFloor;
-        this.watchTimes = watchTimes;
-        this.buildYear = buildYear;
-        this.status = status;
-        this.createTime = createTime;
-        this.lastUpdateTime = lastUpdateTime;
-        this.cityEnName = cityEnName;
-        this.regionEnName = regionEnName;
-        this.cover = cover;
-        this.direction = direction;
-        this.distanceToSubway = distanceToSubway;
-        this.parlour = parlour;
-        this.district = district;
-        this.adminId = adminId;
-        this.bathroom = bathroom;
-        this.street = street;
-    }
-
-    protected House() {
-    }
 }

@@ -14,7 +14,6 @@ import java.io.Serializable;
 @Entity(name = "house_tag")
 @Table(name = "house_tag")
 @Data
-@Builder
 @ToString
 public class HouseTag implements Serializable {
 
@@ -29,13 +28,4 @@ public class HouseTag implements Serializable {
 
     /**标签名*/
     private String name;
-
-    public HouseTag(Integer id, Integer houseId, String name) {
-        this.id = id;
-        this.houseId = houseId;
-        this.name = name;
-    }
-
-    protected HouseTag() {
-    }
 }

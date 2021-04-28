@@ -14,7 +14,6 @@ import java.io.Serializable;
 @Entity(name = "house_detail")
 @Table(name = "house_detail")
 @Data
-@Builder
 @ToString
 public class HouseDetail implements Serializable {
     /**主键*/
@@ -62,24 +61,4 @@ public class HouseDetail implements Serializable {
     /**房源*/
     @Column(name = "house_id")
     private Integer houseId;
-
-    public HouseDetail(Integer id, String description, String layoutDesc, String traffic, String roundService,
-                       Integer rentWay, String address, Integer subwayLineId, String subwayLineName,
-                       Integer subwayStationId, String subwayStationName, Integer houseId) {
-        this.id = id;
-        this.description = description;
-        this.layoutDesc = layoutDesc;
-        this.traffic = traffic;
-        this.roundService = roundService;
-        this.rentWay = rentWay;
-        this.address = address;
-        this.subwayLineId = subwayLineId;
-        this.subwayLineName = subwayLineName;
-        this.subwayStationId = subwayStationId;
-        this.subwayStationName = subwayStationName;
-        this.houseId = houseId;
-    }
-
-    protected HouseDetail() {
-    }
 }

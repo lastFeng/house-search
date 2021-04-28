@@ -14,7 +14,6 @@ import java.io.Serializable;
 @Entity(name = "subway_station")
 @Table(name = "subway_station")
 @Data
-@Builder
 @ToString
 public class SubwayStation implements Serializable {
 
@@ -29,13 +28,4 @@ public class SubwayStation implements Serializable {
     /**所属地铁线*/
     @Column(name = "subway_id")
     private Integer subwayId;
-
-    public SubwayStation(Integer id, String name, Integer subwayId) {
-        this.id = id;
-        this.name = name;
-        this.subwayId = subwayId;
-    }
-
-    protected SubwayStation() {
-    }
 }

@@ -11,7 +11,6 @@ import java.io.Serializable;
 @Entity(name = "house_picture")
 @Table(name = "house_picture")
 @Data
-@Builder
 @ToString
 public class HousePicture implements Serializable {
     /**主键*/
@@ -38,18 +37,4 @@ public class HousePicture implements Serializable {
 
     /**图片路径*/
     private String path;
-
-    public HousePicture(Integer id, Integer houseId, String cdnPrefix,
-                        Integer width, Integer height, String location, String path) {
-        this.id = id;
-        this.houseId = houseId;
-        this.cdnPrefix = cdnPrefix;
-        this.width = width;
-        this.height = height;
-        this.location = location;
-        this.path = path;
-    }
-
-    protected HousePicture() {
-    }
 }

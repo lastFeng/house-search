@@ -13,7 +13,6 @@ import java.util.Date;
 @Entity(name = "house_subscribe")
 @Table(name = "house_subscribe")
 @Data
-@Builder
 @ToString
 public class HouseSubscribe implements Serializable {
 
@@ -57,21 +56,4 @@ public class HouseSubscribe implements Serializable {
     /**管理员*/
     @Column(name = "admin_id")
     private Integer adminId;
-
-    public HouseSubscribe(Integer id, Integer houseId, Integer userId, String desc, Integer status,
-                          Date createTime, Date lastUpdateTime, Date orderTime, String telephone, Integer adminId) {
-        this.id = id;
-        this.houseId = houseId;
-        this.userId = userId;
-        this.desc = desc;
-        this.status = status;
-        this.createTime = createTime;
-        this.lastUpdateTime = lastUpdateTime;
-        this.orderTime = orderTime;
-        this.telephone = telephone;
-        this.adminId = adminId;
-    }
-
-    protected HouseSubscribe() {
-    }
 }
