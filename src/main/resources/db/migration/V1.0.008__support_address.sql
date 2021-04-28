@@ -1,7 +1,7 @@
 use house_search;
 drop table if exists support_address;
 create table support_address(
-    id int(11) unsigned not null comment 'id',
+    id int(11) unsigned not null auto_increment comment 'id',
     belong_to varchar(64) comment '所属城市',
     en_name varchar(64) comment '英文名称',
     cn_name varchar(128) comment '中文名称',

@@ -1,6 +1,6 @@
 drop table if exists `user`;
 create table `user`(
-    id int(11) unsigned not null comment '用户id',
+    id int(11) unsigned not null auto_increment comment '用户id',
     name varchar(64) comment '用户名称',
     email varchar(64) comment '用户邮箱',
     phone_number varchar(20) comment '用户手机号',

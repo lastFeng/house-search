@@ -1,6 +1,6 @@
 drop table if exists house;
 create table house(
-    id int(11) unsigned not null comment '房子id',
+    id int(11) unsigned not null auto_increment comment '房子id',
     title varchar(64) comment '房子标题',
     price int default 0 comment '房价',
     area int default 10 comment '房子面积',

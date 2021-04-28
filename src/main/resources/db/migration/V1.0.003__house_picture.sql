@@ -1,6 +1,6 @@
 drop table if exists house_picture;
 create table house_picture(
-    id int(11) unsigned not null comment '图片id',
+    id int(11) unsigned not null auto_increment comment '图片id',
     house_id int(11) unsigned not null comment '房子id',
     cdn_prefix varchar(64) comment 'CDN前缀',
     width int comment '图片宽度',

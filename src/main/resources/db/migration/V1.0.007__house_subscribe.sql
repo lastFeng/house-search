@@ -1,7 +1,7 @@
 use house_search;
 drop table if exists house_subscribe;
 create table house_subscribe(
-    id int(11) unsigned not null comment '订阅id',
+    id int(11) unsigned not null auto_increment comment '订阅id',
     house_id int(11) unsigned comment '房源id',
     user_id int(11) unsigned comment '用户id',
     `desc` varchar(64) comment '用户描述',

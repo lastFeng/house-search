@@ -1,6 +1,6 @@
 drop table if exists house_detail;
 create table house_detail(
-    id int(11) unsigned not null,
+    id int(11) unsigned not null auto_increment comment '详情id',
     description varchar(256) comment '详细描述',
     layout_desc varchar(255) comment '布局描述',
     traffic varchar(255) comment '交通',

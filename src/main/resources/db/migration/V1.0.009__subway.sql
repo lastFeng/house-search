@@ -1,7 +1,7 @@
 use house_search;
 drop table if exists subway;
 create table subway(
-    id int(11) unsigned not null comment '地铁id',
+    id int(11) unsigned not null auto_increment comment '地铁id',
     name varchar(64) comment '地铁名',
     city_en_name varchar(64) comment '城市名',
     primary key (id)

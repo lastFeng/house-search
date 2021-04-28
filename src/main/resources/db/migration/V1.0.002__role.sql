@@ -1,6 +1,6 @@
 drop table if exists `role`;
 create table `role`(
-    id int(11) unsigned not null comment '角色id',
+    id int(11) unsigned not null auto_increment comment '角色id',
     user_id int(11) unsigned not null comment '用户id',
     name varchar(64) comment '角色名称',
     primary key (id)

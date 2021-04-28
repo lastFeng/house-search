@@ -2,7 +2,7 @@ use house_search;
 drop table if exists house_tag;
 create table house_tag(
     house_id int(11) unsigned comment '房源id',
-    id int(11) unsigned not null comment '标签id',
+    id int(11) unsigned not null auto_increment comment '标签id',
     name varchar(64) comment '标签名',
     primary key (id)
 ) engine = InnoDB comment '房源标签';
