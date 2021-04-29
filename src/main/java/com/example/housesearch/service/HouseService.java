@@ -6,6 +6,7 @@ import com.example.housesearch.domain.base.PhotoForm;
 import com.example.housesearch.domain.base.ServiceResult;
 import com.example.housesearch.domain.dto.HouseDTO;
 import com.example.housesearch.reposity.*;
+import com.example.housesearch.utils.LoginUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,10 @@ public class HouseService {
     public ServiceResult<HouseDTO> saveOrUpdate(HouseForm houseForm) {
         // id为空为新增
         House house = modelMapper.map(houseForm, House.class);
+        if (LoginUtils.getLoginUserId() == -1) {
+            return ServiceResult.<HouseDTO>builder().success(false).message("用户未登录").build();
+        }
+        house.setAdminId(LoginUtils.getLoginUserId());
         HouseDetail detail;
         List<HousePicture> pictures;
         List<HouseTag> tags;
@@ -148,6 +153,15 @@ public class HouseService {
         houseDetailService.deleteByHouseId(houseId);
         houseRepository.deleteById(houseId);
         return ServiceResult.<Void>builder().success(true).build();
+    }
+
+    /**
+     * 通过id查找房源
+     * @param houseId
+     * @return
+     */
+    public House findById(Integer houseId) {
+        return houseRepository.findById(houseId).orElse(null);
     }
 
     /***

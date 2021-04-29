@@ -47,4 +47,12 @@ public class LoginUtils {
         }
         return null;
     }
+
+    public static Integer getLoginUserId() {
+        User user = load();
+        if (user == null) {
+            return -1;
+        }
+        return user.getId();
+    }
 }
