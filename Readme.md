@@ -9,3 +9,7 @@
 - Maven
 - MySql 5.7+
 - Elasticsearch 6.8
+
+#### 其他
+- [es参考博客](https://www.cnblogs.com/reycg-blog/p/10013038.html)
+- [ES RestClient SearchAPI](https://www.cnblogs.com/reycg-blog/p/9946821.html)
