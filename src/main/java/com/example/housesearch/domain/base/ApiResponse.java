@@ -14,6 +14,7 @@ public class ApiResponse {
     private int code;
     private String message;
     private Object data;
+    private boolean more;
 
     private ApiResponse(int code, String message, Object data) {
         this.code = code;
@@ -31,6 +32,10 @@ public class ApiResponse {
 
     public static ApiResponse of(int code, String message, Object data) {
         return new ApiResponse(code, message, data);
+    }
+
+    public static ApiResponse of(int code, Object data) {
+        return new ApiResponse(code, null, data);
     }
 
     /***

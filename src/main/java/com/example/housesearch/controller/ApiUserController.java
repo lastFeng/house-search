@@ -1,13 +1,17 @@
 package com.example.housesearch.controller;
 
 import com.example.housesearch.domain.base.ApiResponse;
+import com.example.housesearch.domain.base.ServiceMultiResult;
 import com.example.housesearch.domain.base.ServiceResult;
+import com.example.housesearch.domain.dto.HouseDTO;
+import com.example.housesearch.domain.dto.HouseSubscribeDTO;
 import com.example.housesearch.service.HouseSubscribeService;
 import com.example.housesearch.service.UserService;
 import com.example.housesearch.utils.LoginUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +43,7 @@ public class ApiUserController {
             return ApiResponse.of(ApiResponse.Status.BAD_REQUEST.getCode(), ApiResponse.Status.BAD_REQUEST.getStandardMessage());
         }
 
-        if ("emali".equals(profile) && !LoginUtils.checkEmail(value)) {
+        if ("email".equals(profile) && !LoginUtils.checkEmail(value)) {
             return ApiResponse.of(HttpStatus.SC_BAD_REQUEST, "不支持的邮箱格式");
         }
 
@@ -62,7 +66,12 @@ public class ApiUserController {
     public ApiResponse subscribeList(@RequestParam(value = "start", defaultValue = "0") int start,
                                      @RequestParam(value = "size", defaultValue = "10") int size,
                                      @RequestParam(value = "status") int status) {
-        return null;
+        ServiceMultiResult<Pair<HouseDTO, HouseSubscribeDTO>> subscribes = houseSubscribeService.findSubscribeListByStatus(status, start, size);
+        ApiResponse response = ApiResponse.of(HttpStatus.SC_OK, subscribes.getResult());
+        if (subscribes.getResult().size() > 0) {
+            response.setMore(subscribes.getTotal() > (size + start));
+        }
+        return response;
     }
 
     /***

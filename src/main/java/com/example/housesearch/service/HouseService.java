@@ -4,8 +4,9 @@ import com.example.housesearch.domain.*;
 import com.example.housesearch.domain.base.HouseForm;
 import com.example.housesearch.domain.base.PhotoForm;
 import com.example.housesearch.domain.base.ServiceResult;
-import com.example.housesearch.domain.dto.HouseDTO;
+import com.example.housesearch.domain.dto.*;
 import com.example.housesearch.reposity.*;
+import com.example.housesearch.utils.Constant;
 import com.example.housesearch.utils.LoginUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -14,10 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * @author : guoweifeng
@@ -120,18 +118,18 @@ public class HouseService {
     private void wrappedHouseDetail(HouseDetail detail, HouseForm houseForm) {
         detail.setHouseId(houseForm.getId());
         if (Objects.nonNull(houseForm.getSubwayLineId())) {
-            Subway subway = subwayService.findById(houseForm.getSubwayLineId()).orElse(null);
-            if (Objects.nonNull(subway)) {
-                detail.setSubwayLineId(subway.getId());
-                detail.setSubwayLineName(subway.getName());
+            ServiceResult<SubwayDTO> subway = subwayService.findSubwayById(houseForm.getSubwayLineId());
+            if (subway.isSuccess()) {
+                detail.setSubwayLineId(subway.getResult().getId());
+                detail.setSubwayLineName(subway.getResult().getName());
             }
         }
 
         if (!Objects.nonNull(houseForm.getSubwayStationId())) {
-            SubwayStation subwayStation = subwayStationService.findById(houseForm.getSubwayStationId()).orElse(null);
-            if (Objects.nonNull(subwayStation)) {
-                detail.setSubwayStationId(subwayStation.getId());
-                detail.setSubwayStationName(subwayStation.getName());
+            ServiceResult<SubwayStationDTO> station = subwayStationService.findSubwayStationById(houseForm.getSubwayStationId());
+            if (station.isSuccess()) {
+                detail.setSubwayStationId(station.getResult().getId());
+                detail.setSubwayStationName(station.getResult().getName());
             }
         }
 
@@ -162,6 +160,77 @@ public class HouseService {
      */
     public House findById(Integer houseId) {
         return houseRepository.findById(houseId).orElse(null);
+    }
+
+    public Iterable<House> findAllByIds(List<Integer> ids) {
+        List<House> allById = houseRepository.findAllById(ids);
+        return (Iterable<House>) allById.iterator();
+    }
+
+    /***
+     * 更新房源观看记录
+     * @param houseId
+     */
+    @Transactional
+    public void updateWatchTimes(Integer houseId) {
+        House house = houseRepository.findById(houseId).get();
+        house.setWatchTimes(house.getWatchTimes() + 1);
+        houseRepository.save(house);
+    }
+
+    public ServiceResult<HouseDTO> findCompleteOne(Integer id) {
+        House house = houseRepository.findById(id).orElse(null);
+        if (house == null) {
+            return ServiceResult.<HouseDTO>builder().success(false).build();
+        }
+
+        HouseDetail detail = houseDetailService.findByHouseId(id).get();
+        List<HousePicture> pictures = housePictureService.findAllByHouseId(id);
+        List<HousePictureDTO> pictureDTOS = new ArrayList<>();
+        pictures.forEach(p -> pictureDTOS.add(modelMapper.map(p, HousePictureDTO.class)));
+        List<HouseTag> tags = houseTagService.findAllByHouseId(id);
+        List<String> tagNames = new ArrayList<>();
+        tags.forEach(name -> tagNames.add(name.getName()));
+
+        HouseDTO houseDTO = modelMapper.map(house, HouseDTO.class);
+        houseDTO.setHouseDetail(modelMapper.map(detail, HouseDetailDTO.class));
+        houseDTO.setPictures(pictureDTOS);
+        houseDTO.setTags(tagNames);
+
+        if (LoginUtils.getLoginUserId() > 0) {
+            HouseSubscribe subscribe = houseSubscribeService.findByHouseIdAndUserId(house.getId(), LoginUtils.getLoginUserId());
+            if (subscribe != null) {
+                houseDTO.setSubscribeStatus(subscribe.getStatus());
+            }
+        }
+
+        return ServiceResult.<HouseDTO>builder().success(true).message("success").result(houseDTO).build();
+    }
+
+    /***
+     * ge更新房源状态
+     * @param id
+     * @param status
+     * @return
+     */
+    public ServiceResult updateStatus(Integer id, int status) {
+        House house = houseRepository.findById(id).orElse(null);
+        if (house == null) {
+            return ServiceResult.builder().success(false).message("House Not Found").build();
+        }
+
+        if (status == house.getStatus()) {
+            return ServiceResult.builder().success(false).message("Status Not Change").build();
+        }
+
+        if (house.getStatus() == Constant.HouseStatus.RENTED.getValue() ||
+                house.getStatus() == Constant.HouseStatus.DELETED.getValue()) {
+            return ServiceResult.builder().success(false).message("No Permission").build();
+        }
+
+        houseRepository.updateStatus(id, status);
+
+        return ServiceResult.builder().success(true).message("success").build();
     }
 
     /***

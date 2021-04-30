@@ -21,7 +21,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
      * @param telephone
      * @return
      */
-    User findUserByTelephone(String telephone);
+    User findUserByPhoneNumber(String telephone);
 
     /**
      * 通过id修改用户名
@@ -29,8 +29,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
      * @param name
      */
     @Modifying
-    @Query("update user set user.name = :name where id = :id")
-    void updateNameById(@Param("id") Integer id,@Param("name") String name);
+    @Query("update user set name = :name where id = :id")
+    void updateName(@Param("id") Integer id, @Param("name") String name);
 
     /**
      * 通过Id修改邮箱
@@ -38,8 +38,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
      * @param email
      */
     @Modifying
-    @Query("update user set user.email = :name where id = :id")
-    void updateEmailById(@Param("id")Integer id,@Param("email") String email);
+    @Query("update user set email = :email where id = :id")
+    void updateEmail(@Param("id")Integer id, @Param("email") String email);
 
     /***
      * 通过id修改密码
@@ -47,6 +47,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
      * @param password
      */
     @Modifying
-    @Query("update user set user.password = :name where id = :id")
-    void updatePasswordById(@Param("id")Integer id,@Param("password") String password);
+    @Query("update user set password = :password where id = :id")
+    void updatePassword(@Param("id")Integer id, @Param("password") String password);
 }

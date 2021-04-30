@@ -21,8 +21,8 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 
-import static com.example.housesearch.utils.Contant.AUTHORITY_PREFIX;
-import static com.example.housesearch.utils.Contant.USER_ROLE_NAME;
+import static com.example.housesearch.utils.Constant.AUTHORITY_PREFIX;
+import static com.example.housesearch.utils.Constant.USER_ROLE_NAME;
 
 /**
  * @author : guoweifeng
@@ -50,7 +50,7 @@ public class UserService {
      * @return
      */
     public User findUserByTelephone(String telephone) {
-        User user = userRepository.findUserByTelephone(telephone);
+        User user = userRepository.findUserByPhoneNumber(telephone);
         return getUser(user);
     }
 
@@ -63,7 +63,7 @@ public class UserService {
             return ServiceResult.<UserDTO>builder().success(false).message("用户未注册").build();
         }
         UserDTO userDTO = modelMapper.map(user, UserDTO.class);
-        return ServiceResult.<UserDTO>builder().success(true).result(userDTO).build();
+        return ServiceResult.<UserDTO>builder().success(true).message("success").result(userDTO).build();
     }
 
     /***
@@ -132,13 +132,13 @@ public class UserService {
         }
         switch (profile) {
             case "name":
-                userRepository.updateNameById(userId, value);
+                userRepository.updateName(userId, value);
                 break;
             case "email":
-                userRepository.updateEmailById(userId, value);
+                userRepository.updateEmail(userId, value);
                 break;
             case "password":
-                userRepository.updatePasswordById(userId, bCryptPasswordEncoder.encode(value));
+                userRepository.updatePassword(userId, bCryptPasswordEncoder.encode(value));
                 break;
             default:
                 return ServiceResult.builder().success(false).message("不支持的属性").build();

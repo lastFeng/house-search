@@ -2,18 +2,26 @@ package com.example.housesearch.service;
 
 import com.example.housesearch.domain.House;
 import com.example.housesearch.domain.HouseSubscribe;
+import com.example.housesearch.domain.base.ServiceMultiResult;
 import com.example.housesearch.domain.base.ServiceResult;
+import com.example.housesearch.domain.dto.HouseDTO;
+import com.example.housesearch.domain.dto.HouseSubscribeDTO;
 import com.example.housesearch.reposity.HouseSubscribeRepository;
 import com.example.housesearch.utils.LoginUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-import java.util.Objects;
+import java.util.*;
 
-import static com.example.housesearch.utils.Contant.*;
+import static com.example.housesearch.utils.Constant.*;
 
 /**
  * @author : guoweifeng
@@ -28,6 +36,57 @@ public class HouseSubscribeService {
     @Autowired
     private HouseService houseService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
+    /***
+     * 查找房源订阅列表
+     * @param start
+     * @param size
+     * @return
+     */
+    public ServiceMultiResult<Pair<HouseDTO, HouseSubscribeDTO>> findSubscribeList(int start, int size) {
+        Integer loginUserId = LoginUtils.getLoginUserId();
+        Pageable pageable = PageRequest.of(start/size, size, Sort.by(Sort.Direction.DESC, "orderTime"));
+        Page<HouseSubscribe> allByUserIdAndStatus = houseSubscribeRepository.findAllByUserIdAndStatus(loginUserId, SUBSCRIBE_STATUS_IN_ORDER_LIST, pageable);
+
+        return wrapper(allByUserIdAndStatus);
+    }
+
+    public ServiceMultiResult<Pair<HouseDTO, HouseSubscribeDTO>> findSubscribeListByStatus(Integer status, int start, int size) {
+        Integer loginUserId = LoginUtils.getLoginUserId();
+        Pageable pageable = PageRequest.of(start / size, size, Sort.by(Sort.Direction.DESC, "createTime"));
+
+        Page<HouseSubscribe> idAndStatus = houseSubscribeRepository.findAllByUserIdAndStatus(loginUserId, status, pageable);
+        return wrapper(idAndStatus);
+    }
+
+    private ServiceMultiResult<Pair<HouseDTO, HouseSubscribeDTO>> wrapper(Page<HouseSubscribe> page) {
+        List<Pair<HouseDTO, HouseSubscribeDTO>> result = new ArrayList<>();
+
+        if (page.getSize() >= 1) {
+            List<HouseSubscribeDTO> subscribeDTOS = new ArrayList<>();
+            List<Integer> houseIds = new ArrayList<>();
+
+            page.forEach(scribe -> {
+                subscribeDTOS.add(modelMapper.map(scribe, HouseSubscribeDTO.class));
+                houseIds.add(scribe.getHouseId());
+            });
+
+            Iterable<House> houses = houseService.findAllByIds(houseIds);
+            Map<Integer, HouseDTO> houseDTOMap = new HashMap<>();
+
+            houses.forEach(house -> {
+                houseDTOMap.put(house.getId(), modelMapper.map(house, HouseDTO.class));
+            });
+            subscribeDTOS.forEach(subscribe -> {
+                result.add(Pair.of(houseDTOMap.get(subscribe.getHouseId()), subscribe));
+            });
+        }
+
+        return ServiceMultiResult.<Pair<HouseDTO, HouseSubscribeDTO>>builder().total(page.getTotalElements()).result(result).build();
+    }
+
     /***
      * 添加房源订阅到待订阅区
      * @param houseId 房源Id
@@ -38,7 +97,7 @@ public class HouseSubscribeService {
         Integer loginUserId = LoginUtils.getLoginUserId();
         House house = houseService.findById(houseId);
         Date now = new Date();
-        HouseSubscribe byHouseIdAndUserId = houseSubscribeRepository.findByHouseIdAndUserId(houseId, loginUserId);
+        HouseSubscribe byHouseIdAndUserId = findByHouseIdAndUserId(houseId, loginUserId);
 
         if (Objects.nonNull(byHouseIdAndUserId) && SUBSCRIBE_STATUS_FINISH.equals(byHouseIdAndUserId.getStatus())) {
             byHouseIdAndUserId.setStatus(SUBSCRIBE_STATUS_IN_ORDER_LIST);
@@ -72,7 +131,7 @@ public class HouseSubscribeService {
         House house = houseService.findById(houseId);
         Date now = new Date();
 
-        HouseSubscribe byHouseIdAndUserId = houseSubscribeRepository.findByHouseIdAndUserId(houseId, loginUserId);
+        HouseSubscribe byHouseIdAndUserId = findByHouseIdAndUserId(houseId, loginUserId);
 
         if (Objects.nonNull(byHouseIdAndUserId) && (SUBSCRIBE_STATUS_IN_ORDER_LIST.equals(byHouseIdAndUserId.getStatus())
                 ||SUBSCRIBE_STATUS_FINISH.equals(byHouseIdAndUserId.getStatus()))) {
@@ -103,12 +162,40 @@ public class HouseSubscribeService {
     @Transactional
     public ServiceResult cancelSubscribe(Integer houseId) {
         Integer loginUserId = LoginUtils.getLoginUserId();
-        HouseSubscribe byHouseIdAndUserId = houseSubscribeRepository.findByHouseIdAndUserId(houseId, loginUserId);
+        HouseSubscribe byHouseIdAndUserId = findByHouseIdAndUserId(houseId, loginUserId);
 
         if (Objects.nonNull(byHouseIdAndUserId)) {
             houseSubscribeRepository.deleteById(byHouseIdAndUserId.getId());
         }
 
         return ServiceResult.builder().success(true).build();
+    }
+
+    /***
+     * 完成订阅
+     * @return
+     */
+    @Transactional
+    public ServiceResult finishSubscribe(Integer houseId) {
+        Integer loginUserId = LoginUtils.getLoginUserId();
+        HouseSubscribe subscribe = findByHouseIdAndUserId(houseId, loginUserId);
+        if (subscribe == null) {
+            return  ServiceResult.builder().success(false).message("无预约记录").build();
+        }
+
+        houseSubscribeRepository.updateStatus(subscribe.getId(), SUBSCRIBE_STATUS_FINISH);
+        houseService.updateWatchTimes(houseId);
+
+        return ServiceResult.builder().success(true).message("success").build();
+    }
+
+    /***
+     * 通过id与登录id查找
+     * @param id
+     * @param loginUserId
+     * @return
+     */
+    public HouseSubscribe findByHouseIdAndUserId(Integer id, Integer loginUserId) {
+        return houseSubscribeRepository.findByHouseIdAndUserId(id, loginUserId);
     }
 }
