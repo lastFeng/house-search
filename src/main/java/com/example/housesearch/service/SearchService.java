@@ -4,6 +4,7 @@ import com.example.housesearch.domain.House;
 import com.example.housesearch.domain.HouseDetail;
 import com.example.housesearch.domain.HouseTag;
 import com.example.housesearch.domain.SupportAddress;
+import com.example.housesearch.domain.base.ServiceMultiResult;
 import com.example.housesearch.domain.base.ServiceResult;
 import com.example.housesearch.domain.search.*;
 import com.example.housesearch.utils.Constant;
@@ -11,6 +12,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.admin.indices.analyze.AnalyzeAction;
 import org.elasticsearch.action.admin.indices.analyze.AnalyzeRequestBuilder;
@@ -21,12 +23,26 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.ElasticsearchClient;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.SuggestBuilders;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestionBuilder;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -35,9 +51,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static com.example.housesearch.utils.Constant.*;
 
@@ -271,5 +285,233 @@ public class SearchService {
         } catch (JsonProcessingException e) {
             log.error("send to kafka message={} error", message);
         }
+    }
+
+    /**
+     * 通过某些搜索，搜索出房源id
+     * @param rentSearch
+     * @return
+     */
+    public ServiceMultiResult<Integer> query(RentSearch rentSearch) {
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        // 设置城市
+        boolQuery.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, rentSearch.getCityEnName()));
+        // 设置区域
+        if (rentSearch.getRegionEnName() != null && !"*".equals(rentSearch.getRegionEnName())) {
+            boolQuery.filter(QueryBuilders.termQuery(HouseIndexKey.REGION_EN_NAME, rentSearch.getRegionEnName()));
+        }
+
+        // 设置区域范围
+        RentValueBlock area = RentValueBlock.matchArea(rentSearch.getAreaBlock());
+        if (!Objects.equals(RentValueBlock.ALL, area)) {
+            RangeQueryBuilder rangeQueryBuilder = QueryBuilders.rangeQuery(HouseIndexKey.AREA);
+            if (area.getMax() > 0) {
+                rangeQueryBuilder.lte(area.getMax());
+            }
+            if (area.getMin() > 0) {
+                rangeQueryBuilder.gte(area.getMin());
+            }
+            boolQuery.filter(rangeQueryBuilder);
+        }
+        // 设置房价范围
+        RentValueBlock price = RentValueBlock.matchPrice(rentSearch.getPriceBlock());
+        if (!Objects.equals(RentValueBlock.ALL, price)) {
+            RangeQueryBuilder rangeQueryBuilder = QueryBuilders.rangeQuery(HouseIndexKey.PRICE);
+            if (price.getMax() > 0) {
+                rangeQueryBuilder.lte(price.getMax());
+            }
+            if (price.getMin() > 0) {
+                rangeQueryBuilder.gte(price.getMin());
+            }
+            boolQuery.filter(rangeQueryBuilder);
+        }
+        // 设置租房方式
+        if (rentSearch.getRentWay() > -1) {
+            boolQuery.filter(QueryBuilders.termQuery(HouseIndexKey.RENT_WAY, rentSearch.getRentWay()));
+        }
+        // 设置房屋朝向
+        if (rentSearch.getDirection() > 0) {
+            boolQuery.filter(QueryBuilders.termQuery(HouseIndexKey.DIRECTION, rentSearch.getDirection()));
+        }
+        // 关键词查找
+        boolQuery.must(QueryBuilders.multiMatchQuery(rentSearch.getKeywords(), HouseIndexKey.TITLE, HouseIndexKey.TRAFFIC,
+                HouseIndexKey.DISTRICT, HouseIndexKey.ROUND_SERVICE, HouseIndexKey.SUBWAY_LINE_NAME, HouseIndexKey.SUBWAY_STATION_NAME));
+
+        // 构件
+        SearchRequestBuilder request = esClient.prepareSearch(HOUSE_INDEX_NAME).setTypes(HOUSE_INDEX_TYPE)
+                .setQuery(boolQuery)
+                .addSort(HouseSort.getSortKey(rentSearch.getOrderBy()), SortOrder.fromString(rentSearch.getOrderDirection()))
+                .setFrom(rentSearch.getStart())
+                .setSize(rentSearch.getSize())
+                .setFetchSource(HouseIndexKey.HOUSE_ID, null);
+
+        // 获取返回值
+        SearchResponse response = request.get();
+        List<Integer> houseIds = new ArrayList<>();
+
+        if (response.status() != RestStatus.OK) {
+            return ServiceMultiResult.<Integer>builder().total(0L).result(houseIds).build();
+        }
+
+        for (SearchHit hit : response.getHits()) {
+            houseIds.add(Integer.parseInt(String.valueOf(hit.getSourceAsMap().get(HouseIndexKey.HOUSE_ID))));
+        }
+        return ServiceMultiResult.<Integer>builder().total(response.getHits().totalHits).result(houseIds).build();
+    }
+
+    /***
+     * 获取提示内容
+     * @param prefix
+     * @return
+     */
+    public ServiceResult<List<String>> suggest(String prefix) {
+        String suggestionName = "autocomplete";
+        int maxSize = 5;
+        // 设置完全补全的配置
+        CompletionSuggestionBuilder suggestionBuilder = SuggestBuilders.completionSuggestion("suggest")
+                .prefix(prefix).size(maxSize);
+        // 设置builder
+        SuggestBuilder suggestBuilder = new SuggestBuilder();
+        suggestBuilder.addSuggestion(suggestionName, suggestionBuilder);
+        // 配置请求
+        SearchRequestBuilder request = esClient.prepareSearch(HOUSE_INDEX_NAME).setTypes(HOUSE_INDEX_TYPE).suggest(suggestBuilder);
+
+        // 获得返回结果
+        Suggest suggest = request.get().getSuggest();
+        if (suggest == null) {
+            return ServiceResult.<List<String>>builder().success(true).result(new ArrayList<>()).build();
+        }
+
+        Suggest.Suggestion result = suggest.getSuggestion(suggestionName);
+        int maxSuggest = 0;
+        Set<String> suggestSet = new HashSet<>();
+        for (Object entry : result.getEntries()) {
+            if (entry instanceof CompletionSuggestion.Entry) {
+                CompletionSuggestion.Entry item = (CompletionSuggestion.Entry)entry;
+                if (item.getOptions().isEmpty()) {
+                    continue;
+                }
+                for (CompletionSuggestion.Entry.Option option : item.getOptions()) {
+                    String tip = option.getText().string();
+                    if (suggestSet.contains(tip)) {
+                        continue;
+                    }
+                    suggestSet.add(tip);
+                    maxSuggest++;
+                }
+            }
+            if (maxSuggest > maxSize) {
+                break;
+            }
+        }
+        List<String> list = Lists.newArrayList(suggestSet);
+        return ServiceResult.<List<String>>builder().success(true).result(list).build();
+    }
+
+    /***
+     * 聚合查询街区房源
+     */
+    public ServiceResult<Integer> aggregationDistrictHouse(String cityEnName, String regionEnName, String district) {
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
+                .filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityEnName))
+                .filter(QueryBuilders.termQuery(HouseIndexKey.REGION_EN_NAME, regionEnName))
+                .filter(QueryBuilders.termQuery(HouseIndexKey.DISTRICT, district));
+
+        SearchRequestBuilder request = esClient.prepareSearch(HOUSE_INDEX_NAME).setTypes(HOUSE_INDEX_TYPE)
+                .setQuery(boolQuery)
+                .addAggregation(AggregationBuilders.terms(HouseIndexKey.AGG_DISTRICT).field(HouseIndexKey.DISTRICT))
+                .setSize(0);
+        SearchResponse response = request.get();
+
+        if (response.status() == RestStatus.OK) {
+            Terms aggregation = response.getAggregations().get(HouseIndexKey.AGG_DISTRICT);
+            if (!CollectionUtils.isEmpty(aggregation.getBuckets())) {
+                return ServiceResult.<Integer>builder().success(true).result((int) aggregation.getBucketByKey(district).getDocCount()).build();
+            }
+        }
+        return ServiceResult.<Integer>builder().success(true).result(0).build();
+    }
+
+    /**
+     * 地图的聚合查询,通过给定的城市名与区域
+     */
+    public ServiceMultiResult<HouseBucketDTO> mapAggregation(String cityEnName) {
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityEnName));
+
+        TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms(HouseIndexKey.AGG_REGION).field(HouseIndexKey.REGION_EN_NAME);
+        SearchRequestBuilder request = esClient.prepareSearch(HOUSE_INDEX_NAME).setTypes(HOUSE_INDEX_TYPE).setQuery(boolQueryBuilder)
+                .addAggregation(aggregationBuilder);
+        SearchResponse response = request.get();
+        List<HouseBucketDTO> result = new ArrayList<>();
+        if (response.status() == RestStatus.OK) {
+            Terms aggregation = response.getAggregations().get(HouseIndexKey.AGG_REGION);
+            for (Terms.Bucket bucket : aggregation.getBuckets()) {
+                result.add(new HouseBucketDTO(bucket.getKeyAsString(), bucket.getDocCount()));
+            }
+        }
+        return ServiceMultiResult.<HouseBucketDTO>builder().total(CollectionUtils.isEmpty(result) ? 0L : response.getHits().getTotalHits())
+                .result(result).build();
+    }
+
+    /**
+     * 通过给定字段查询
+     * @param cityEnName
+     * @param orderBy
+     * @param orderDirection
+     * @param start
+     * @param size
+     * @return
+     */
+    public ServiceMultiResult<Integer> mapQuery(String cityEnName, String orderBy, String orderDirection, int start, int size) {
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, cityEnName));
+
+        SearchRequestBuilder request = esClient.prepareSearch(HOUSE_INDEX_NAME).setTypes(HOUSE_INDEX_TYPE)
+                .setQuery(boolQueryBuilder)
+                .addSort(HouseSort.getSortKey(orderBy), SortOrder.fromString(orderDirection))
+                .setFrom(start)
+                .setSize(size);
+
+        SearchResponse response = request.get();
+        List<Integer> list = new ArrayList<>();
+
+        if (response.status() == RestStatus.OK) {
+            for (SearchHit hit : response.getHits()) {
+                list.add(Integer.parseInt(String.valueOf(hit.getSourceAsMap().get(HouseIndexKey.HOUSE_ID))));
+            }
+        }
+        return ServiceMultiResult.<Integer>builder().total(CollectionUtils.isEmpty(list) ? 0L : response.getHits().getTotalHits())
+                .result(list).build();
+    }
+
+    /***
+     * 通过Map搜索对象来查询
+     * @param mapSearch
+     * @return
+     */
+    public ServiceMultiResult<Integer> mapQuery(MapSearch mapSearch) {
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+
+        boolQueryBuilder.filter(QueryBuilders.termQuery(HouseIndexKey.CITY_EN_NAME, mapSearch.getCityEnName()));
+        boolQueryBuilder.filter(
+                QueryBuilders.geoBoundingBoxQuery("location")
+                .setCorners(
+                        new GeoPoint(mapSearch.getLeftLatitude(), mapSearch.getLeftLongitude()),
+                        new GeoPoint(mapSearch.getRightLatitde(), mapSearch.getRightLongitude())));
+        SearchResponse response = esClient.prepareSearch(HOUSE_INDEX_NAME).setTypes(HOUSE_INDEX_TYPE)
+                .setQuery(boolQueryBuilder)
+                .addSort(HouseSort.getSortKey(mapSearch.getOrderBy()), SortOrder.fromString(mapSearch.getOrderDirection()))
+                .setFrom(mapSearch.getSize())
+                .setSize(mapSearch.getSize()).get();
+
+        List<Integer> list = new ArrayList<>();
+        if (response.status() == RestStatus.OK) {
+            for (SearchHit hit : response.getHits()) {
+                list.add(Integer.parseInt(String.valueOf(hit.getSourceAsMap().get(HouseIndexKey.HOUSE_ID))));
+            }
+        }
+        return ServiceMultiResult.<Integer>builder().total(CollectionUtils.isEmpty(list) ? 0L : response.getHits().getTotalHits())
+                .result(list).build();
     }
 }
