@@ -34,6 +34,15 @@ public interface Constant {
     /**短信验证码前缀*/
     String SMS_CODE_CONTENT_PREFIX = "SMS::CODE::CONTENT::";
 
+    // Elasticsearch
+    /**房源索引*/
+    String HOUSE_INDEX_NAME = "house_search";
+    String HOUSE_INDEX_TYPE = "_doc";
+
+    // Kafka
+    // 房源Topic
+    String HOUSE_TOPIC = "HOUSE_SEARCH_TOPIC";
+
     /**
      * 城市级别
      */
