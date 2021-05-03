@@ -10,7 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -40,5 +44,36 @@ public class SubwayStationService {
             return ServiceResult.<SubwayStationDTO>builder().success(false).build();
         }
         return ServiceResult.<SubwayStationDTO>builder().success(true).result(modelMapper.map(byId.get(), SubwayStationDTO.class)).build();
+    }
+
+    /**
+     * 根据地铁id查找所有地铁站信息
+     * @param subwayId
+     * @return
+     */
+    public List<SubwayStationDTO> findAllStationBySubway(Integer subwayId) {
+        List<SubwayStation> subwayStations = subwayStationRepository.findAllBySubwayId(subwayId);
+        List<SubwayStationDTO> result = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(subwayStations)) {
+            subwayStations.forEach(item -> result.add(modelMapper.map(item, SubwayStationDTO.class)));
+        }
+
+        return result;
+    }
+
+    /***
+     * 根据地铁站id查找地铁站信息
+     * @param stationId
+     * @return
+     */
+    public ServiceResult<SubwayStationDTO> findById(Integer stationId) {
+        if (Objects.nonNull(stationId)) {
+            SubwayStation subwayStation = subwayStationRepository.findById(stationId).orElse(null);
+            if (Objects.nonNull(subwayStation)) {
+                return ServiceResult.<SubwayStationDTO>builder().success(true).message("success")
+                        .result(modelMapper.map(subwayStation, SubwayStationDTO.class)).build();
+            }
+        }
+        return ServiceResult.<SubwayStationDTO>builder().success(false).message("Not Found").result(null).build();
     }
 }
